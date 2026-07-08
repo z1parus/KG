@@ -7,7 +7,12 @@ import {
   query,
   updateDoc,
 } from "firebase/firestore";
-import type { Order, OrderDraft, OrderStatus } from "@/core/domain/order";
+import {
+  OrderValidationError,
+  type Order,
+  type OrderDraft,
+  type OrderStatus,
+} from "@/core/domain/order";
 import type { OrderRepository } from "@/core/domain/repositories/order-repository";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getDb, getFirebaseApp } from "./firebase-client";
@@ -25,8 +30,18 @@ export class FirestoreOrderRepository implements OrderRepository {
       getFunctions(getFirebaseApp()),
       "createOrder",
     );
-    const { data } = await callable(draft);
-    const order = await this.getOrder(data.orderId);
+    let orderId: string;
+    try {
+      const { data } = await callable(draft);
+      orderId = data.orderId;
+    } catch (error) {
+      const details = (error as { details?: { errors?: string[] } }).details;
+      if (details?.errors?.length) {
+        throw new OrderValidationError(details.errors);
+      }
+      throw error;
+    }
+    const order = await this.getOrder(orderId);
     if (!order) {
       throw new Error("Заказ не найден после создания");
     }

@@ -107,15 +107,21 @@ src/
   Вход пока без авторизации (демо-режим; роль `admin` — при подключении Firebase).
 - ✅ Проверено e2e в браузере (Playwright) + `npm run build`, `lint`, `test` (22/22) зелёные.
 
-**Остаётся для реального бэкенда (Фаза 2, серверная часть — заблокировано отсутствием Firebase-проекта):**
-- [ ] **Cloud Function `createOrder`** (TypeScript, 2nd gen): та же логика, что в `SeedOrderRepository`,
-  через переиспользование `core/domain/order-pricing.ts` и `order-validation.ts`. Должна быть
-  единственным способом записи в `orders`.
-- [ ] Firestore Security Rules: запретить прямую запись клиента в `orders`; чтение — только свои заказы.
-- [ ] FCM-пуш ресторану на `onCreate` заказа.
-- [ ] Наполнить Firestore коллекциями (`menu`, `categories`, `restaurants`, `promocodes`) — сейчас это seed.
-> `FirestoreOrderRepository`/`FirestorePromocodeRepository` уже написаны (вызывают callable
-> `createOrder` и читают Firestore), но **не протестированы** без реального проекта.
+**Серверный бэкенд (написан, готов к деплою — заблокирован отсутствием Firebase-проекта):**
+- ✅ **Cloud Function `createOrder`** (`functions/`, 2nd gen, TS): пересчёт по меню, валидация,
+  подсчёт итога, номер через транзакцию, статус `new`. **Переиспользует то же ядро**
+  `core/domain` (копируется `functions/scripts/copy-domain.mjs` — единый источник правды).
+  Компилируется (tsc) — проверено. `onOrderCreated` — FCM-пуш ресторану.
+- ✅ `firestore.rules`: прямая запись клиента в `orders` запрещена (только функция), чтение —
+  свои/админ, запись в меню — только `admin`-claim. `firestore.indexes.json`, `firebase.json`.
+- ✅ `functions/scripts/seed-firestore.mjs` — наполнение Firestore seed-данными.
+- ✅ Клиентский `FirestoreOrderRepository` мапит ошибку callable → `OrderValidationError`.
+- 📋 **Что должен сделать владелец** (см. `FIREBASE.md`): создать проект (Blaze), внести
+  `NEXT_PUBLIC_FIREBASE_*` в `web/.env.local`, задеплоить rules/functions, запустить seed,
+  назначить claim `admin=true`. **Cloud-путь не протестирован e2e без реального проекта.**
+
+**Осталось по Firebase (следующий шаг, лучше на живом проекте):** экран входа админа
+`/admin/login` (Firebase Auth) + гейт по claim `admin`, realtime-лента заказов (`onSnapshot`).
 
 **Дальше (Фаза 4 «Аккаунты и удержание»):** Firebase Auth (phone/email), профиль и адреса,
 экран «Мои заказы» (история), повтор заказа, realtime-статус заказа, FCM-пуш при смене статуса.
@@ -138,4 +144,5 @@ npm install
 npm run dev     # http://localhost:3000  (работает на seed-данных без ключей)
 ```
 
-Подключение Firebase: `cp web/.env.example web/.env.local` и заполнить ключи.
+Подключение Firebase — полная инструкция в [`FIREBASE.md`](FIREBASE.md)
+(создать проект, `web/.env.local`, деплой rules/functions, seed, роль `admin`).
