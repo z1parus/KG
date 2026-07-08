@@ -2,6 +2,7 @@ import {
   OrderValidationError,
   type Order,
   type OrderDraft,
+  type OrderStatus,
 } from "@/core/domain/order";
 import { computePricing, resolveOrderItems } from "@/core/domain/order-pricing";
 import { findZone, validateDraft } from "@/core/domain/order-validation";
@@ -99,5 +100,21 @@ export class SeedOrderRepository implements OrderRepository {
 
   async getOrder(id: string): Promise<Order | null> {
     return loadOrders()[id] ?? null;
+  }
+
+  async listOrders(): Promise<Order[]> {
+    return Object.values(loadOrders()).sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
+  }
+
+  async updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
+    const order = loadOrders()[id];
+    if (!order) {
+      throw new Error(`Заказ не найден: ${id}`);
+    }
+    const updated: Order = { ...order, status };
+    saveOrder(updated);
+    return updated;
   }
 }

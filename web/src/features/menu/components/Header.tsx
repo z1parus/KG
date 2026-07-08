@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCart } from "@/features/cart/cart-context";
 import { useRestaurant } from "@/features/menu/hooks/use-restaurant";
 import { Container } from "@/ui/Container";
 
 export function Header() {
+  const pathname = usePathname();
   const { restaurant } = useRestaurant();
   const { count } = useCart();
+
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur">

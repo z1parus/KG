@@ -1,7 +1,11 @@
 import type { Category } from "@/core/domain/category";
 import type { Dish } from "@/core/domain/dish";
-import type { MenuRepository } from "@/core/domain/repositories/menu-repository";
-import { seedCategories, seedDishes } from "./seed-data";
+import type {
+  DishPatch,
+  MenuRepository,
+} from "@/core/domain/repositories/menu-repository";
+import { seedCategories } from "./seed-data";
+import { readDishes, updateDish } from "./seed-store";
 
 export class SeedMenuRepository implements MenuRepository {
   async getCategories(): Promise<Category[]> {
@@ -11,26 +15,30 @@ export class SeedMenuRepository implements MenuRepository {
   }
 
   async getDishes(): Promise<Dish[]> {
-    return seedDishes;
+    return readDishes();
   }
 
   async getDishesByCategory(categoryId: string): Promise<Dish[]> {
-    return seedDishes.filter((d) => d.categoryId === categoryId);
+    return readDishes().filter((d) => d.categoryId === categoryId);
   }
 
   async getDish(id: string): Promise<Dish | null> {
-    return seedDishes.find((d) => d.id === id) ?? null;
+    return readDishes().find((d) => d.id === id) ?? null;
   }
 
   async getPopular(): Promise<Dish[]> {
-    return seedDishes.filter((d) => d.popular && d.available);
+    return readDishes().filter((d) => d.popular && d.available);
   }
 
   async searchDishes(query: string): Promise<Dish[]> {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return [];
-    return seedDishes.filter((d) =>
+    return readDishes().filter((d) =>
       d.name.toLowerCase().includes(normalized),
     );
+  }
+
+  async updateDish(id: string, patch: DishPatch): Promise<Dish> {
+    return updateDish(id, patch);
   }
 }

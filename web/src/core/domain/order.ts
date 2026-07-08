@@ -101,3 +101,38 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: "Наличными курьеру",
   card_on_delivery: "Картой курьеру",
 };
+
+/** Статусы, в которые ресторан может перевести заказ из текущего (конечный автомат). */
+export function nextStatuses(
+  status: OrderStatus,
+  fulfillment: Fulfillment,
+): OrderStatus[] {
+  switch (status) {
+    case "new":
+      return ["accepted", "cancelled"];
+    case "accepted":
+      return ["cooking", "cancelled"];
+    case "cooking":
+      return ["ready", "cancelled"];
+    case "ready":
+      return fulfillment === "delivery"
+        ? ["on_the_way", "cancelled"]
+        : ["delivered", "cancelled"];
+    case "on_the_way":
+      return ["delivered"];
+    default:
+      return [];
+  }
+}
+
+export const activeStatuses: OrderStatus[] = [
+  "new",
+  "accepted",
+  "cooking",
+  "ready",
+  "on_the_way",
+];
+
+export function isActiveStatus(status: OrderStatus): boolean {
+  return activeStatuses.includes(status);
+}

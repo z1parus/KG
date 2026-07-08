@@ -5,11 +5,15 @@ import {
   getDocs,
   orderBy,
   query,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import type { Category } from "@/core/domain/category";
 import type { Dish } from "@/core/domain/dish";
-import type { MenuRepository } from "@/core/domain/repositories/menu-repository";
+import type {
+  DishPatch,
+  MenuRepository,
+} from "@/core/domain/repositories/menu-repository";
 import { getDb } from "./firebase-client";
 import { toCategory, toDish } from "./mappers";
 
@@ -59,5 +63,15 @@ export class FirestoreMenuRepository implements MenuRepository {
     if (!normalized) return [];
     const all = await this.getDishes();
     return all.filter((d) => d.name.toLowerCase().includes(normalized));
+  }
+
+  async updateDish(id: string, patch: DishPatch): Promise<Dish> {
+    const db = getDb();
+    await updateDoc(doc(db, "menu", id), { ...patch });
+    const updated = await this.getDish(id);
+    if (!updated) {
+      throw new Error(`Блюдо не найдено: ${id}`);
+    }
+    return updated;
   }
 }
