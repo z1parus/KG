@@ -1,6 +1,8 @@
 import type { DocumentData } from "firebase/firestore";
 import type { Category } from "@/core/domain/category";
 import type { Dish, DishOption } from "@/core/domain/dish";
+import type { Order, OrderItem, OrderPricing } from "@/core/domain/order";
+import type { Promocode } from "@/core/domain/promocode";
 import type { Restaurant } from "@/core/domain/restaurant";
 
 export function toCategory(id: string, data: DocumentData): Category {
@@ -27,6 +29,42 @@ export function toDish(id: string, data: DocumentData): Dish {
     popular: data.popular ?? false,
     options: (data.options ?? []) as DishOption[],
     allergens: (data.allergens ?? []) as string[],
+  };
+}
+
+export function toPromocode(data: DocumentData): Promocode {
+  return {
+    code: data.code ?? "",
+    type: data.type ?? "percent",
+    value: data.value ?? 0,
+    minOrder: data.minOrder ?? 0,
+    active: data.active ?? false,
+  };
+}
+
+export function toOrder(id: string, data: DocumentData): Order {
+  return {
+    id,
+    number: data.number ?? 0,
+    items: (data.items ?? []) as OrderItem[],
+    pricing: (data.pricing ?? {
+      subtotal: data.subtotal ?? 0,
+      deliveryFee: data.deliveryFee ?? 0,
+      discount: data.discount ?? 0,
+      total: data.total ?? 0,
+    }) as OrderPricing,
+    fulfillment: data.fulfillment ?? "delivery",
+    address: data.deliveryAddress ?? data.address,
+    customer: data.customer ?? { name: "", phone: "" },
+    scheduledTime: data.scheduledTime ?? null,
+    comment: data.comment,
+    paymentMethod: data.paymentMethod ?? "cash",
+    promocodeId: data.promocodeId,
+    status: data.status ?? "new",
+    createdAt:
+      typeof data.createdAt === "string"
+        ? data.createdAt
+        : (data.createdAt?.toDate?.().toISOString() ?? new Date().toISOString()),
   };
 }
 

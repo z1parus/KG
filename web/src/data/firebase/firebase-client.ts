@@ -17,15 +17,19 @@ export function isFirebaseConfigured(): boolean {
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
 
-export function getDb(): Firestore {
+export function getFirebaseApp(): FirebaseApp {
   if (!isFirebaseConfigured()) {
     throw new Error("Firebase is not configured (missing NEXT_PUBLIC_FIREBASE_* env).");
   }
   if (!app) {
     app = getApps()[0] ?? initializeApp(firebaseConfig);
   }
+  return app;
+}
+
+export function getDb(): Firestore {
   if (!db) {
-    db = getFirestore(app);
+    db = getFirestore(getFirebaseApp());
   }
   return db;
 }

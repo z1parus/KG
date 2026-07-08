@@ -4,7 +4,6 @@ import Link from "next/link";
 import { lineTotal } from "@/core/domain/cart";
 import { useCart } from "@/features/cart/cart-context";
 import { DishImage } from "@/features/menu/components/DishImage";
-import { Button } from "@/ui/Button";
 import { Container } from "@/ui/Container";
 import { Price } from "@/ui/Price";
 import { QtyStepper } from "@/ui/QtyStepper";
@@ -83,9 +82,12 @@ export function CartView() {
             <div className="text-sm text-muted-foreground">Итого</div>
             <Price amount={subtotal} className="text-lg" />
           </div>
-          <Button disabled title="Оформление заказа — Фаза 2">
+          <Link
+            href="/checkout"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-brand px-5 font-medium text-brand-foreground hover:bg-brand-hover"
+          >
             Оформить заказ
-          </Button>
+          </Link>
         </Container>
       </div>
     </Container>

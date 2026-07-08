@@ -74,3 +74,8 @@ GoogleService-Info.plist
 
 # Melos
 .melos_tool/
+
+# Node / веб (само приложение — в web/ со своим .gitignore; тут защита от артефактов в корне)
+/node_modules
+.next/
+*.tsbuildinfo

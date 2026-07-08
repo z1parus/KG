@@ -1,5 +1,6 @@
 import type { Category } from "@/core/domain/category";
 import type { Dish } from "@/core/domain/dish";
+import type { Promocode } from "@/core/domain/promocode";
 import type { Restaurant } from "@/core/domain/restaurant";
 
 export const seedRestaurant: Restaurant = {
@@ -16,6 +17,11 @@ export const seedRestaurant: Restaurant = {
   currency: "RUB",
   address: "г. Пример, ул. Центральная, 1",
 };
+
+export const seedPromocodes: Promocode[] = [
+  { code: "WELCOME10", type: "percent", value: 10, minOrder: 500, active: true },
+  { code: "FIX100", type: "fixed", value: 100, minOrder: 800, active: true },
+];
 
 export const seedCategories: Category[] = [
   { id: "pizza", name: "Пицца", order: 1, hidden: false },
