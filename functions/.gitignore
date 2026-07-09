@@ -1,4 +1,0 @@
-node_modules/
-lib/
-# Генерируется copy-domain из web/src/core/domain — не хранится в git.
-src/domain/

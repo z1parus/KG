@@ -1,0 +1,6 @@
+# Генерируется copy-domain из web/src/core/domain — не хранится в git.
+functions/create-order/domain/
+
+# Локальные артефакты Supabase CLI
+.branches/
+.temp/

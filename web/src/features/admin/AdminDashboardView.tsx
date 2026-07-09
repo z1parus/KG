@@ -73,8 +73,8 @@ export function AdminDashboardView() {
       </section>
 
       <p className="text-xs text-muted-foreground">
-        Демо-режим: вход без авторизации. Роль <code>admin</code> (Firebase custom
-        claims) появится при подключении Firebase.
+        Демо-режим: вход без авторизации. Роль <code>admin</code> (claim в
+        Supabase) появится при подключении Supabase.
       </p>
     </Container>
   );

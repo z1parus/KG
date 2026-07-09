@@ -18,7 +18,7 @@
 |---|---|---|
 | Платформа сейчас | **Только веб** | Явное указание владельца. Мобильные (Flutter) — позже. |
 | Фронтенд | **Next.js 16 + React 19 + TypeScript + Tailwind v4** | Для веб-only лучше нативный веб-стек, чем Flutter Web (размер бандла, SEO — риск №11 в roadmap). Node/npm есть в окружении, Flutter — нет. |
-| Бэкенд | **Firebase (Firestore)** | Как в roadmap. Спрятан за интерфейсами репозиториев. |
+| Бэкенд | **Supabase (Postgres + RLS + Edge Functions)** | Реляционка удобнее для заказов/финансов; Edge Functions без платного тарифа; нет Google lock-in. Спрятан за интерфейсами репозиториев. |
 | Dev без ключей | **seed-данные** | Приложение запускается и проверяется без настройки облака. |
 
 > Roadmap изначально предполагал Flutter (ради единого кода веб+мобайл). Мы сознательно
@@ -31,16 +31,16 @@
 
 ```
 src/
-├── core/            ФРЕЙМВОРКО-НЕЗАВИСИМОЕ ЯДРО. Чистый TypeScript, БЕЗ React и БЕЗ Firebase.
+├── core/            ФРЕЙМВОРКО-НЕЗАВИСИМОЕ ЯДРО. Чистый TypeScript, БЕЗ React и БЕЗ Supabase.
 │   └── domain/
 │       ├── entities: dish.ts, category.ts, restaurant.ts, money.ts
 │       ├── cart.ts            — чистая логика корзины (+ cart.test.ts)
 │       └── repositories/      — интерфейсы (ports): menu-repository.ts, restaurant-repository.ts
 ├── data/            АДАПТЕРЫ. Реализуют интерфейсы из core.
 │   ├── seed/         — SeedMenuRepository, SeedRestaurantRepository + seed-data.ts
-│   └── firebase/     — firebase-client.ts, firestore-*-repository.ts, mappers.ts
+│   └── supabase/     — supabase-client.ts, supabase-*-repository.ts, mappers.ts
 ├── lib/
-│   └── repositories.ts        — COMPOSITION ROOT: выбирает seed vs firebase по наличию env
+│   └── repositories.ts        — COMPOSITION ROOT: выбирает seed vs supabase по наличию env
 ├── ui/              ДИЗАЙН-СИСТЕМА. Базовые компоненты на токенах (Button, Badge, Price, …).
 ├── features/        ФИЧИ. feature-first.
 │   ├── menu/         — hooks (use-menu, use-dish, use-restaurant), components (Views, Cards, …)
@@ -54,21 +54,21 @@ src/
    через hook/репозиторий, отрисовать, отправить событие. Чем меньше логики в JSX — тем дешевле
    Flutter-порт (переписывается только презентация; `core/` переносится в Dart почти 1:1).
 2. **Доступ к данным — только через интерфейсы репозиториев** (`core/domain/repositories`).
-   Компоненты никогда не импортируют Firebase напрямую. Выбор реализации — в `lib/repositories.ts`.
+   Компоненты никогда не импортируют Supabase напрямую. Выбор реализации — в `lib/repositories.ts`.
 3. **Никакой Next-специфики (server actions и т.п.) в бизнес-логике.** App Router — лишь доставка.
 4. **Дизайн — на токенах** (`app/globals.css`, блок `:root` + `@theme`). Компоненты ссылаются на
    токены (`bg-brand`, `text-muted-foreground`), а не на конкретные цвета. Визуал «допиливается»
    правкой токенов без переписывания компонентов.
-5. **Итог заказа и валидацию считает сервер** (Cloud Functions), не клиент (roadmap, риск №4).
-   Клиентская cart-логика — только для отображения. Прямая запись в `orders` будет запрещена.
+5. **Итог заказа и валидацию считает сервер** (Edge Function `create-order`), не клиент (риск №4).
+   Клиентская cart-логика — только для отображения. Прямой insert в `orders` запрещён RLS.
 6. **Money**: цены — целые рубли (`number`), форматирование через `formatPrice` (`core/domain/money.ts`).
    При онлайн-оплате (Фаза 5) перейти на минорные единицы/Money-VO во избежание float-ошибок.
 
 ### Портируемость на Flutter (план на будущее)
 
-- **Общий контракт данных**: и веб, и будущий Flutter-клиент ходят в **одну Firestore-схему**
-  (`Roadmap/05-data-model.md`). Переносить надо только реализацию репозиториев (Dart вместо TS),
-  интерфейсы и доменные модели совпадают по смыслу.
+- **Общий контракт данных**: и веб, и будущий Flutter-клиент ходят в **одну Postgres-схему Supabase**
+  (`supabase/migrations`). Переносить надо только реализацию репозиториев (Dart + `supabase_flutter`
+  вместо TS), интерфейсы и доменные модели совпадают по смыслу.
 - Сущности из `core/domain` ↔ Dart freezed-классы. Cart-логика ↔ чистые Dart-функции.
 - Презентация (`ui/`, `features/*/components`) переписывается на Flutter-виджеты + Riverpod.
 
@@ -77,8 +77,8 @@ src/
 - `params` и `searchParams` в `page.tsx`/`layout.tsx` — **Promise**, нужно `await`. Поэтому
   динамические роуты сделаны серверными: `await params` → передаём в клиентский View.
 - Turbopack по умолчанию (`next dev`/`next build`). `next lint` убран — линт через `eslint` напрямую.
-- Данные грузятся **на клиенте** (hooks + useEffect), т.к. Firebase Web SDK клиентский. Это же
-  упрощает будущий Flutter-порт (runtime-загрузка). SSR/SEO — отложены (Фаза 6, roadmap риск №11).
+- Данные грузятся **на клиенте** (hooks + useEffect) через `supabase-js`. Это упрощает будущий
+  Flutter-порт (runtime-загрузка). SSR/SEO — отложены (Фаза 6, roadmap риск №11).
 - Изображения блюд: пока плейсхолдеры-эмодзи (`DishImage`), без сети. Реальные фото — Фаза 6
   (через `next/image` + `images.remotePatterns`).
 
@@ -89,7 +89,7 @@ src/
 **Сделано (Фаза 0 + Фаза 1 «Каталог» + Фаза 2 «Корзина и заказ» + Фаза 3 «Админ-панель»):**
 - ✅ Скаффолд Next.js, структура слоёв, дизайн-токены, базовая UI-система.
 - ✅ Доменные модели + cart-логика + ценообразование/валидация заказа (unit-тесты, 18/18).
-- ✅ Репозитории: seed (рабочие) + Firestore (за интерфейсами, готовы к ключам) + composition root.
+- ✅ Репозитории: seed (рабочие) + Supabase (за интерфейсами, готовы к ключам) + composition root.
   Добавлены `OrderRepository`, `PromocodeRepository`.
 - ✅ Каталог: главная, поиск, страница категории, карточка блюда с опциями и пересчётом цены,
   бейдж «нет в наличии».
@@ -97,42 +97,45 @@ src/
 - ✅ Оформление заказа (`/checkout`): доставка/самовывоз, зона доставки, адрес, контакты, комментарий,
   способ оплаты (наличные/карта курьеру), промокод. Сводка цены (сумма/доставка/скидка/итог).
 - ✅ **Серверно-авторитетное создание заказа**: клиент шлёт черновик (без цен) → «сервер»
-  (`SeedOrderRepository`, аналог Cloud Function) пересчитывает по меню, валидирует, считает итог,
+  (`SeedOrderRepository`, аналог Edge Function) пересчитывает по меню, валидирует, считает итог,
   присваивает номер, статус `new`. Экран успеха `/order/[id]` с номером/статусом/составом.
 - ✅ Минимальная сумма заказа (по зоне), промокоды (percent/fixed, порог `minOrder`).
 - ✅ **Админ-панель `/admin/*`** (без покупательской шапки): сводка (режим работы `isOpen`,
   статистика за день — заказы/выручка/средний чек), лента заказов со сменой статусов
   (конечный автомат `nextStatuses`, «Выдан» для самовывоза), управление меню (наличие/цена/
   название). Admin-правки в seed-режиме персистятся через `seed-store` (localStorage).
-  Вход пока без авторизации (демо-режим; роль `admin` — при подключении Firebase).
+  Вход пока без авторизации (демо-режим; роль `admin` — при подключении Supabase).
 - ✅ Проверено e2e в браузере (Playwright) + `npm run build`, `lint`, `test` (22/22) зелёные.
 
-**Серверный бэкенд (написан, готов к деплою — заблокирован отсутствием Firebase-проекта):**
-- ✅ **Cloud Function `createOrder`** (`functions/`, 2nd gen, TS): пересчёт по меню, валидация,
-  подсчёт итога, номер через транзакцию, статус `new`. **Переиспользует то же ядро**
-  `core/domain` (копируется `functions/scripts/copy-domain.mjs` — единый источник правды).
-  Компилируется (tsc) — проверено. `onOrderCreated` — FCM-пуш ресторану.
-- ✅ `firestore.rules`: прямая запись клиента в `orders` запрещена (только функция), чтение —
-  свои/админ, запись в меню — только `admin`-claim. `firestore.indexes.json`, `firebase.json`.
-- ✅ `functions/scripts/seed-firestore.mjs` — наполнение Firestore seed-данными.
-- ✅ Клиентский `FirestoreOrderRepository` мапит ошибку callable → `OrderValidationError`.
-- 📋 **Что должен сделать владелец** (см. `FIREBASE.md`): создать проект (Blaze), внести
-  `NEXT_PUBLIC_FIREBASE_*` в `web/.env.local`, задеплоить rules/functions, запустить seed,
-  назначить claim `admin=true`. **Cloud-путь не протестирован e2e без реального проекта.**
+**Серверный бэкенд Supabase (написан, готов к деплою — заблокирован отсутствием проекта):**
+- ✅ **Edge Function `create-order`** (`supabase/functions/`, Deno/TS): пересчёт по меню, валидация,
+  подсчёт итога, вставка с service-role (минуя RLS). **Переиспользует то же ядро** `core/domain`
+  (`supabase/scripts/copy-domain.mjs` копирует файлы, добавляя `.ts` для Deno — единый источник).
+- ✅ `supabase/migrations/*_init.sql`: схема (таблицы + `order_number_seq`) и **RLS** — прямой
+  insert клиента в `orders` запрещён (пишет только функция), чтение свои/админ, запись в меню —
+  только роль `admin` (claim в `app_metadata`, функция `public.is_admin()`).
+- ✅ `supabase/seed.sql` — наполнение Postgres seed-данными. `supabase/config.toml`.
+- ✅ Клиентский `SupabaseOrderRepository` мапит ошибку Edge Function → `OrderValidationError`.
+- 📋 **Что должен сделать владелец** (см. `SUPABASE.md`): создать проект, внести
+  `NEXT_PUBLIC_SUPABASE_*` в `web/.env.local`, `supabase db push`, применить `seed.sql`,
+  задеплоить функцию, выдать себе `role=admin`. **Путь не протестирован e2e без проекта;
+  Deno/CLI в окружении нет — Edge Function проверена только визуально.**
 
-**Осталось по Firebase (следующий шаг, лучше на живом проекте):** экран входа админа
-`/admin/login` (Firebase Auth) + гейт по claim `admin`, realtime-лента заказов (`onSnapshot`).
+**Осталось по Supabase (следующий шаг, лучше на живом проекте):** экран входа админа
+`/admin/login` (Supabase Auth) + гейт по роли `admin`, realtime-лента заказов
+(`supabase.channel(...).on('postgres_changes', ...)`).
 
-**Дальше (Фаза 4 «Аккаунты и удержание»):** Firebase Auth (phone/email), профиль и адреса,
-экран «Мои заказы» (история), повтор заказа, realtime-статус заказа, FCM-пуш при смене статуса.
-Реалтайм ленты админа и авторизация по роли `admin` подключаются вместе с Firebase.
+**Дальше (Фаза 4 «Аккаунты и удержание»):** Supabase Auth (phone/email), профиль и адреса,
+экран «Мои заказы» (история), повтор заказа, realtime-статус заказа, пуш при смене статуса.
+Реалтайм ленты админа и авторизация по роли `admin` подключаются вместе с Supabase.
 
 ## 6. Конвенции для кода (адаптация `Roadmap/08-ai-assist.md`)
 
 - Перед принятием кода: `npm run lint`, `npm run test`, `npm run build` — без ошибок.
 - Модели иммутабельны; cart/доменные операции — чистые функции, возвращают новые объекты.
 - Чувствительная логика (итог заказа, валидация) — на сервере, не на клиенте.
-- Без хардкода ключей/секретов. Firebase-конфиг — только через `NEXT_PUBLIC_*` env.
+- Без хардкода ключей/секретов. Supabase-конфиг — только через `NEXT_PUBLIC_*` env
+  (service_role-ключ — только в Edge Function, не на клиенте).
 - Комментарии в коде — только там, где неочевидно «почему»; не описывать очевидное «что».
 - Новую фичу класть в `src/features/<name>` по той же схеме (hooks/components), логику — в `core`.
 
@@ -144,5 +147,5 @@ npm install
 npm run dev     # http://localhost:3000  (работает на seed-данных без ключей)
 ```
 
-Подключение Firebase — полная инструкция в [`FIREBASE.md`](FIREBASE.md)
-(создать проект, `web/.env.local`, деплой rules/functions, seed, роль `admin`).
+Подключение Supabase — полная инструкция в [`SUPABASE.md`](SUPABASE.md)
+(создать проект, `web/.env.local`, `db push`, seed, деплой функции, роль `admin`).

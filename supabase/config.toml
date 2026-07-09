@@ -1,0 +1,13 @@
+# Конфигурация Supabase CLI. project_id — произвольная метка локального проекта;
+# при `supabase link` привязывается к вашему облачному проекту по ref.
+project_id = "vkusny-ugolok"
+
+[db]
+port = 54322
+
+[api]
+port = 54321
+
+[functions.create-order]
+# Функция публичная: JWT не требуется (заказ можно оформить без входа).
+verify_jwt = false

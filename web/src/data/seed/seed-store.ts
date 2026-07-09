@@ -6,7 +6,7 @@ import { seedDishes, seedRestaurant } from "./seed-data";
 /*
  * Локальный «стор» для seed-режима: держит правки админки (наличие/цена блюд,
  * режим работы ресторана) в localStorage, поверх дефолтов из seed-data.
- * В реальном режиме эти данные живут в Firestore — здесь только dev-персист.
+ * В реальном режиме эти данные живут в Supabase (Postgres) — здесь только dev-персист.
  */
 
 const DISHES_KEY = "kg.menu.v1";
