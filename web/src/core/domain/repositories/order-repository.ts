@@ -7,4 +7,6 @@ export interface OrderRepository {
   listOrders(): Promise<Order[]>;
   /** Админ: смена статуса заказа. */
   updateOrderStatus(id: string, status: OrderStatus): Promise<Order>;
+  /** Админ: подписка на изменения заказов (realtime). Возвращает функцию отписки. */
+  watchOrders(onChange: () => void): () => void;
 }

@@ -127,3 +127,17 @@ grant select, update on public.orders to authenticated;
 grant all on public.restaurants, public.categories, public.menu,
               public.promocodes, public.orders to service_role;
 grant usage, select on sequence public.order_number_seq to service_role;
+
+-- Realtime: заказы должны попасть в публикацию supabase_realtime, иначе
+-- postgres_changes по orders не приходят. Добавляем идемпотентно.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public' and tablename = 'orders'
+     ) then
+    alter publication supabase_realtime add table public.orders;
+  end if;
+end $$;

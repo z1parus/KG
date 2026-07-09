@@ -9,6 +9,15 @@ export function useAdminOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
+  const refresh = useCallback(async () => {
+    try {
+      setOrders(await orderRepository.listOrders());
+      setError(undefined);
+    } catch (e) {
+      setError(String(e));
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     orderRepository
@@ -25,19 +34,16 @@ export function useAdminOrders() {
       .finally(() => {
         if (active) setLoading(false);
       });
+    // Realtime: перезагружаем ленту при любом изменении заказов (Supabase);
+    // в seed-режиме — no-op.
+    const unsubscribe = orderRepository.watchOrders(() => {
+      void refresh();
+    });
     return () => {
       active = false;
+      unsubscribe();
     };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    try {
-      setOrders(await orderRepository.listOrders());
-      setError(undefined);
-    } catch (e) {
-      setError(String(e));
-    }
-  }, []);
+  }, [refresh]);
 
   const setStatus = useCallback(
     async (id: string, status: OrderStatus) => {

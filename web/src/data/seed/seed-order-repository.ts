@@ -117,4 +117,9 @@ export class SeedOrderRepository implements OrderRepository {
     saveOrder(updated);
     return updated;
   }
+
+  watchOrders(): () => void {
+    // В seed-режиме realtime нет — админ обновляет ленту вручную/после действий.
+    return () => {};
+  }
 }

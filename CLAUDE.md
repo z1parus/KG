@@ -129,9 +129,16 @@ src/
   `NEXT_PUBLIC_SUPABASE_*` в `web/.env.local`, `supabase db push`, применить `seed.sql`,
   задеплоить функцию, выдать себе `role=admin`.
 
-**Осталось по Supabase (следующий шаг, лучше на живом проекте):** экран входа админа
-`/admin/login` (Supabase Auth) + гейт по роли `admin`, realtime-лента заказов
-(`supabase.channel(...).on('postgres_changes', ...)`).
+**Аутентификация админа + realtime (Supabase Auth) — сделано и проверено на локальном стеке:**
+- ✅ `AuthRepository` в ядре (интерфейс) + `SupabaseAuthRepository` (роль из `app_metadata`)
+  и `SeedAuthRepository` (демо-админ без входа). `authRepository` в composition root.
+- ✅ `/admin/login` (Supabase Auth) + `AdminGate` (гейт по `isAdmin`) + `AuthProvider`.
+  В seed-режиме админка открыта без входа (демо); в Supabase — только роль `admin`.
+- ✅ Realtime-лента: `OrderRepository.watchOrders` — `postgres_changes` по `orders`
+  (Supabase) / no-op (seed). Таблица добавлена в публикацию `supabase_realtime` (в миграции).
+- ✅ **Проверено на локальном Supabase:** гейт редиректит анонима на `/admin/login`; вход под
+  ролью `admin` работает; админ читает заказы (RLS) и меняет статус (RLS update); realtime —
+  вставленный извне заказ появляется в ленте без перезагрузки; выход возвращает на логин.
 
 **Дальше (Фаза 4 «Аккаунты и удержание»):** Supabase Auth (phone/email), профиль и адреса,
 экран «Мои заказы» (история), повтор заказа, realtime-статус заказа, пуш при смене статуса.

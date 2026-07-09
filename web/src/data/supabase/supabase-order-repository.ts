@@ -65,6 +65,20 @@ export class SupabaseOrderRepository implements OrderRepository {
     if (error) throw error;
     return rowToOrder(data);
   }
+
+  watchOrders(onChange: () => void): () => void {
+    const channel = getSupabase()
+      .channel("orders-admin")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => onChange(),
+      )
+      .subscribe();
+    return () => {
+      void getSupabase().removeChannel(channel);
+    };
+  }
 }
 
 async function extractErrorBody(
