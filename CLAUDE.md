@@ -116,10 +116,18 @@ src/
   только роль `admin` (claim в `app_metadata`, функция `public.is_admin()`).
 - ✅ `supabase/seed.sql` — наполнение Postgres seed-данными. `supabase/config.toml`.
 - ✅ Клиентский `SupabaseOrderRepository` мапит ошибку Edge Function → `OrderValidationError`.
+- ✅ **Проверено на локальном Supabase (Docker + CLI + Deno установлены в окружении):**
+  миграция и `seed.sql` применяются без ошибок; `deno check` Edge Function чистый; веб-клиент
+  отдаёт меню из Postgres (read-путь + мапперы + jsonb-опции + `ilike`-поиск — браузером, без
+  ошибок консоли). Безопасность: прямой insert в `orders` под anon → 401; вставка под
+  service_role → 201 с номером из секвенции. **Здесь же пойман и исправлен баг**: без табличных
+  `GRANT` ролям anon/authenticated PostgREST не пускал к таблицам (RLS фильтрует строки, но
+  доступ к таблице даёт GRANT) — добавлено в миграцию.
+- ⚠️ Контейнер `edge_runtime` в песочнице не стартует (вложенный Docker, `rlimit … not permitted`),
+  поэтому сам вызов callable e2e не гонялся; но DB-логика функции доказана вставкой под service_role.
 - 📋 **Что должен сделать владелец** (см. `SUPABASE.md`): создать проект, внести
   `NEXT_PUBLIC_SUPABASE_*` в `web/.env.local`, `supabase db push`, применить `seed.sql`,
-  задеплоить функцию, выдать себе `role=admin`. **Путь не протестирован e2e без проекта;
-  Deno/CLI в окружении нет — Edge Function проверена только визуально.**
+  задеплоить функцию, выдать себе `role=admin`.
 
 **Осталось по Supabase (следующий шаг, лучше на живом проекте):** экран входа админа
 `/admin/login` (Supabase Auth) + гейт по роли `admin`, realtime-лента заказов

@@ -106,3 +106,24 @@ create policy "orders read" on public.orders for select
   using (public.is_admin() or user_id = auth.uid());
 create policy "orders admin update" on public.orders for update
   using (public.is_admin()) with check (public.is_admin());
+
+-- Привилегии ролей. RLS выше фильтрует строки, но доступ к таблице даёт именно
+-- GRANT: без него PostgREST под ролью anon/authenticated получает
+-- "permission denied for table" ещё до проверки политик.
+grant usage on schema public to anon, authenticated;
+
+-- Витрина: публичное чтение; запись — под authenticated (строки гейтит is_admin()).
+grant select on public.restaurants, public.categories, public.menu, public.promocodes
+  to anon, authenticated;
+grant insert, update, delete
+  on public.restaurants, public.categories, public.menu, public.promocodes
+  to authenticated;
+
+-- Заказы: клиент их не вставляет (insert не выдан) — только читает/обновляет под
+-- authenticated (RLS ограничивает свои/админ). Insert делает Edge Function под
+-- service_role, который обходит и GRANT, и RLS.
+grant select, update on public.orders to authenticated;
+
+grant all on public.restaurants, public.categories, public.menu,
+              public.promocodes, public.orders to service_role;
+grant usage, select on sequence public.order_number_seq to service_role;
